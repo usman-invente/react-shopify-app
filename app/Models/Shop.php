@@ -12,7 +12,7 @@ class Shop extends Authenticatable implements IShopModel
 {
     use HasFactory, Notifiable, ShopModel;
 
-    protected $table = 'shops';
+    protected $table = 'users';
 
     /**
      * Package stores the shop domain in `name` and the offline access token in `password`.
