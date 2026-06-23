@@ -1,103 +1,80 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { Head } from '@inertiajs/react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+    Badge,
+    Banner,
+    Button,
+    Card,
+    EmptyState,
+    IndexTable,
+    Modal,
+    Spinner,
+    Text,
+    TextField,
+    Thumbnail,
+} from '@shopify/polaris';
 
-const styles = {
-    container: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-        gap: '24px',
-        marginTop: '24px',
-    },
-    productCard: {
-        backgroundColor: '#fff',
-        borderRadius: '8px',
-        border: '1px solid #e5e7eb',
-        overflow: 'hidden',
-        transition: 'box-shadow 0.2s',
-        cursor: 'pointer',
-    },
-    productImage: {
-        width: '100%',
-        height: '280px',
-        backgroundColor: '#f5f5f5',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '48px',
-    },
-    productInfo: {
-        padding: '16px',
-    },
-    productTitle: {
-        fontSize: '16px',
-        fontWeight: '600',
-        color: '#000',
-        marginBottom: '8px',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-    },
-    productPrice: {
-        fontSize: '18px',
-        fontWeight: '700',
-        color: '#000',
-        marginBottom: '12px',
-    },
-    productStatus: {
-        fontSize: '13px',
-        color: '#666',
-        marginBottom: '12px',
-    },
-    button: {
-        width: '100%',
-        padding: '10px 16px',
-        backgroundColor: '#000',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: '500',
-        transition: 'background-color 0.2s',
-    },
-    section: {
-        marginBottom: '32px',
-    },
-    sectionTitle: {
-        fontSize: '20px',
-        fontWeight: '600',
-        color: '#000',
-    },
-    loading: {
-        textAlign: 'center',
-        padding: '40px 20px',
-        fontSize: '16px',
-        color: '#666',
-    },
-    error: {
-        backgroundColor: '#fef2f2',
-        border: '1px solid #fecaca',
-        color: '#991b1b',
-        padding: '16px',
-        borderRadius: '6px',
-        marginTop: '16px',
-    },
+const resourceName = {
+    singular: 'product',
+    plural: 'products',
 };
+
+function formatPrice(price) {
+    if (!price) {
+        return '—';
+    }
+
+    return `$${parseFloat(price).toFixed(2)}`;
+}
+
+function statusBadge(status) {
+    const normalized = (status || '').toLowerCase();
+
+    if (normalized === 'active') {
+        return <Badge tone="success">Active</Badge>;
+    }
+
+    if (normalized === 'draft') {
+        return <Badge tone="info">Draft</Badge>;
+    }
+
+    if (normalized === 'archived') {
+        return <Badge tone="warning">Archived</Badge>;
+    }
+
+    return <Badge>{status || 'Unknown'}</Badge>;
+}
 
 export default function Products() {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [editingProduct, setEditingProduct] = useState(null);
+    const [editFormData, setEditFormData] = useState({ title: '', vendor: '', price: '' });
+    const [updatingProduct, setUpdatingProduct] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
-    useEffect(() => {
-        fetchProducts();
-    }, []);
+    const filteredProducts = useMemo(() => {
+        if (!searchQuery.trim()) {
+            return products;
+        }
+        const query = searchQuery.toLowerCase();
+        return products.filter(
+            (product) =>
+                product.title?.toLowerCase().includes(query) ||
+                product.vendor?.toLowerCase().includes(query) ||
+                product.handle?.toLowerCase().includes(query)
+        );
+    }, [products, searchQuery]);
 
-    const fetchProducts = async () => {
+    const fetchProducts = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/products');
+            const response = await fetch('/api/products', {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
             const data = await response.json();
 
             if (!response.ok) {
@@ -112,90 +89,219 @@ export default function Products() {
         } finally {
             setLoading(false);
         }
+    }, []);
+
+    useEffect(() => {
+        fetchProducts();
+    }, [fetchProducts]);
+
+    const openEditModal = (product) => {
+        setEditingProduct(product);
+        setEditFormData({
+            title: product.title || '',
+            vendor: product.vendor || '',
+            price: product.price || '',
+        });
     };
+
+    const closeEditModal = () => {
+        setEditingProduct(null);
+        setEditFormData({ title: '', vendor: '', price: '' });
+    };
+
+    const handleUpdateProduct = async () => {
+        if (!editingProduct) return;
+
+        try {
+            setUpdatingProduct(true);
+            const response = await fetch(`/api/products/${editingProduct.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(editFormData),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to update product');
+            }
+
+            setError(null);
+            closeEditModal();
+            await fetchProducts();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setUpdatingProduct(false);
+        }
+    };
+
+    const rowMarkup = filteredProducts.map((product, index) => (
+        <IndexTable.Row id={String(product.id)} key={product.id} position={index}>
+            <IndexTable.Cell>
+                <Thumbnail
+                    source={product.image?.src}
+                    alt={product.image?.alt || product.title}
+                    size="small"
+                />
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+                <Text variant="bodyMd" fontWeight="semibold" as="span">
+                    {product.title}
+                </Text>
+                {product.handle && (
+                    <Text variant="bodySm" tone="subdued" as="p">
+                        {product.handle}
+                    </Text>
+                )}
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+                <Text as="span">{product.vendor || '—'}</Text>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+                <Text as="span">{formatPrice(product.price)}</Text>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+                <Text as="span">{product.inventory ?? 0}</Text>
+            </IndexTable.Cell>
+            <IndexTable.Cell>{statusBadge(product.status)}</IndexTable.Cell>
+            <IndexTable.Cell>
+                <Button size="slim" onClick={() => openEditModal(product)}>
+                    Edit
+                </Button>
+            </IndexTable.Cell>
+        </IndexTable.Row>
+    ));
 
     return (
         <AuthenticatedLayout header="Products">
             <Head title="Products" />
 
-            <div style={styles.section}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 style={styles.sectionTitle}>Shopify Products</h2>
-                    <button
-                        onClick={fetchProducts}
-                        style={{
-                            padding: '10px 16px',
-                            backgroundColor: '#000',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                        }}
-                    >
-                        Refresh
-                    </button>
+            {error && (
+                <div style={{ marginBottom: '16px' }}>
+                    <Banner tone="critical" title="Error">
+                        <p>{error}</p>
+                    </Banner>
+                </div>
+            )}
+
+            <Card padding="0">
+                <div style={{ padding: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <Text variant="headingMd" as="h2">
+                            Shopify Products
+                        </Text>
+                        <Button onClick={fetchProducts} loading={loading}>
+                            Refresh
+                        </Button>
+                    </div>
+                    <TextField
+                        label="Search products"
+                        placeholder="Search by title, vendor, or handle..."
+                        value={searchQuery}
+                        onChange={setSearchQuery}
+                        autoComplete="off"
+                    />
                 </div>
 
-                {error && (
-                    <div style={styles.error}>
-                        {error}
-                    </div>
-                )}
-
                 {loading ? (
-                    <div style={styles.loading}>
-                        Loading products from your Shopify store...
+                    <div style={{ padding: '48px', textAlign: 'center' }}>
+                        <Spinner accessibilityLabel="Loading products" size="large" />
+                        <div style={{ marginTop: '12px' }}>
+                            <Text tone="subdued" as="p">
+                                Loading products from your Shopify store...
+                            </Text>
+                        </div>
                     </div>
                 ) : products.length === 0 ? (
-                    <div style={styles.loading}>
-                        No products found. Connect your store on the Connector page, or add products in Shopify.
+                    <EmptyState
+                        heading="No products found"
+                        image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
+                        action={{
+                            content: 'Refresh',
+                            onAction: fetchProducts,
+                        }}
+                        secondaryAction={{
+                            content: 'Connect store',
+                            url: route('connector'),
+                        }}
+                    >
+                        <p>Connect your store on the Connector page, or add products in Shopify.</p>
+                    </EmptyState>
+                ) : filteredProducts.length === 0 ? (
+                    <div style={{ padding: '48px', textAlign: 'center' }}>
+                        <Text tone="subdued" as="p">
+                            No products match "{searchQuery}". Try adjusting your search.
+                        </Text>
                     </div>
                 ) : (
-                    <div style={styles.container}>
-                        {products.map((product) => (
-                            <div
-                                key={product.id}
-                                style={styles.productCard}
-                                onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.1)'}
-                                onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}
-                            >
-                                <div style={styles.productImage}>
-                                    {product.image ? (
-                                        <img
-                                            src={product.image.src}
-                                            alt={product.title}
-                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                        />
-                                    ) : (
-                                        '📦'
-                                    )}
-                                </div>
-                                <div style={styles.productInfo}>
-                                    <div style={styles.productTitle} title={product.title}>
-                                        {product.title}
-                                    </div>
-                                    {product.price && (
-                                        <div style={styles.productPrice}>
-                                            ${product.price}
-                                        </div>
-                                    )}
-                                    <div style={styles.productStatus}>
-                                        {product.status === 'active' ? '✓ Active' : '⏳ Draft'}
-                                    </div>
-                                    <button
-                                        style={styles.button}
-                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1f2937'}
-                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#000'}
-                                    >
-                                        View Details
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <IndexTable
+                        resourceName={resourceName}
+                        itemCount={filteredProducts.length}
+                        selectable={false}
+                        headings={[
+                            { title: 'Image' },
+                            { title: 'Product' },
+                            { title: 'Vendor' },
+                            { title: 'Price' },
+                            { title: 'Inventory' },
+                            { title: 'Status' },
+                            { title: 'Action' },
+                        ]}
+                    >
+                        {rowMarkup}
+                    </IndexTable>
                 )}
-            </div>
+            </Card>
+
+            <Modal
+                open={!!editingProduct}
+                onClose={closeEditModal}
+                title="Edit Product"
+                primaryAction={{
+                    content: 'Save',
+                    onAction: handleUpdateProduct,
+                    loading: updatingProduct,
+                }}
+                secondaryActions={[
+                    {
+                        content: 'Cancel',
+                        onAction: closeEditModal,
+                    },
+                ]}
+            >
+                <Modal.Section>
+                    <TextField
+                        label="Product Title"
+                        value={editFormData.title}
+                        onChange={(value) => setEditFormData({ ...editFormData, title: value })}
+                        autoComplete="off"
+                    />
+                    <div style={{ marginTop: '16px' }}>
+                        <TextField
+                            label="Vendor"
+                            value={editFormData.vendor}
+                            onChange={(value) => setEditFormData({ ...editFormData, vendor: value })}
+                            autoComplete="off"
+                        />
+                    </div>
+                    <div style={{ marginTop: '16px' }}>
+                        <TextField
+                            label="Price"
+                            value={editFormData.price}
+                            onChange={(value) => setEditFormData({ ...editFormData, price: value })}
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            autoComplete="off"
+                        />
+                    </div>
+                </Modal.Section>
+            </Modal>
         </AuthenticatedLayout>
     );
 }

@@ -29,7 +29,10 @@ Route::get('/products', function () {
     return Inertia::render('Products');
 })->middleware(['auth.or.shop'])->name('products');
 
-Route::get('/api/products', [ProductController::class, 'index'])->middleware(['auth.or.shop']);
+Route::middleware(['auth.or.shop'])->group(function () {
+    Route::get('/api/products', [ProductController::class, 'index']);
+    Route::put('/api/products/{productId}', [ProductController::class, 'update'])->where('productId', '.*');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
