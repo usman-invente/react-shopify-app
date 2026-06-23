@@ -14,11 +14,7 @@ class Shop extends Authenticatable implements IShopModel
 
     protected $table = 'users';
 
-    /**
-     * Package stores the shop domain in `name` and the offline access token in `password`.
-     */
     protected $fillable = [
-        'user_id',
         'name',
         'email',
         'password',
@@ -46,10 +42,5 @@ class Shop extends Authenticatable implements IShopModel
             'shopify_freemium' => 'boolean',
             'password_updated_at' => 'datetime',
         ];
-    }
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
     }
 }
