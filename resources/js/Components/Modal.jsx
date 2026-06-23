@@ -1,9 +1,35 @@
-import {
-    Dialog,
-    DialogPanel,
-    Transition,
-    TransitionChild,
-} from '@headlessui/react';
+const modalStyles = `
+    @keyframes modalOverlayOpen {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+    @keyframes modalContentOpen {
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    .modal-overlay {
+        animation: modalOverlayOpen 0.3s ease-out;
+    }
+    .modal-content {
+        animation: modalContentOpen 0.3s ease-out;
+    }
+`;
+
+if (typeof document !== 'undefined') {
+    const style = document.createElement('style');
+    style.textContent = modalStyles;
+    document.head.appendChild(style);
+}
 
 export default function Modal({
     children,
@@ -18,48 +44,58 @@ export default function Modal({
         }
     };
 
-    const maxWidthClass = {
-        sm: 'sm:max-w-sm',
-        md: 'sm:max-w-md',
-        lg: 'sm:max-w-lg',
-        xl: 'sm:max-w-xl',
-        '2xl': 'sm:max-w-2xl',
-    }[maxWidth];
+    const maxWidths = {
+        sm: '384px',
+        md: '448px',
+        lg: '512px',
+        xl: '576px',
+        '2xl': '672px',
+    };
+
+    if (!show) return null;
 
     return (
-        <Transition show={show} leave="duration-200">
-            <Dialog
-                as="div"
-                id="modal"
-                className="fixed inset-0 z-50 flex transform items-center overflow-y-auto px-4 py-6 transition-all sm:px-0"
-                onClose={close}
-            >
-                <TransitionChild
-                    enter="ease-out duration-300"
-                    enterFrom="opacity-0"
-                    enterTo="opacity-100"
-                    leave="ease-in duration-200"
-                    leaveFrom="opacity-100"
-                    leaveTo="opacity-0"
-                >
-                    <div className="absolute inset-0 bg-gray-500/75" />
-                </TransitionChild>
+        <div
+            style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 50,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '16px',
+            }}
+        >
+            {/* Overlay */}
+            <div
+                className="modal-overlay"
+                style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    cursor: 'pointer',
+                }}
+                onClick={close}
+            />
 
-                <TransitionChild
-                    enter="ease-out duration-300"
-                    enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                    enterTo="opacity-100 translate-y-0 sm:scale-100"
-                    leave="ease-in duration-200"
-                    leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-                    leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                >
-                    <DialogPanel
-                        className={`mb-6 transform overflow-hidden rounded-lg bg-white shadow-xl transition-all sm:mx-auto sm:w-full ${maxWidthClass}`}
-                    >
-                        {children}
-                    </DialogPanel>
-                </TransitionChild>
-            </Dialog>
-        </Transition>
+            {/* Modal Content */}
+            <div
+                className="modal-content"
+                style={{
+                    position: 'relative',
+                    zIndex: 51,
+                    backgroundColor: '#fff',
+                    borderRadius: '8px',
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+                    maxWidth: maxWidths[maxWidth] || maxWidths['2xl'],
+                    width: '100%',
+                    maxHeight: '90vh',
+                    overflow: 'auto',
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {children}
+            </div>
+        </div>
     );
 }

@@ -1,8 +1,29 @@
-import { Transition } from '@headlessui/react';
 import { Link } from '@inertiajs/react';
 import { createContext, useContext, useState } from 'react';
 
 const DropDownContext = createContext();
+
+const dropdownStyle = `
+    @keyframes dropdownOpen {
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    .dropdown-content-open {
+        animation: dropdownOpen 0.2s ease-out;
+    }
+`;
+
+if (typeof document !== 'undefined') {
+    const style = document.createElement('style');
+    style.textContent = dropdownStyle;
+    document.head.appendChild(style);
+}
 
 const Dropdown = ({ children }) => {
     const [open, setOpen] = useState(false);
@@ -13,7 +34,7 @@ const Dropdown = ({ children }) => {
 
     return (
         <DropDownContext.Provider value={{ open, setOpen, toggleOpen }}>
-            <div className="relative">{children}</div>
+            <div style={{ position: 'relative' }}>{children}</div>
         </DropDownContext.Provider>
     );
 };
@@ -27,7 +48,11 @@ const Trigger = ({ children }) => {
 
             {open && (
                 <div
-                    className="fixed inset-0 z-40"
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        zIndex: 40,
+                    }}
                     onClick={() => setOpen(false)}
                 ></div>
             )}
@@ -59,29 +84,32 @@ const Content = ({
 
     return (
         <>
-            <Transition
-                show={open}
-                enter="transition ease-out duration-200"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="transition ease-in duration-75"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
-            >
+            {open && (
                 <div
-                    className={`absolute z-50 mt-2 rounded-md shadow-lg ${alignmentClasses} ${widthClasses}`}
+                    className="dropdown-content-open"
+                    style={{
+                        position: 'absolute',
+                        zIndex: 50,
+                        marginTop: '8px',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                        right: align === 'right' ? 0 : 'auto',
+                        left: align === 'left' ? 0 : 'auto',
+                        minWidth: width === '48' ? '192px' : 'auto',
+                    }}
                     onClick={() => setOpen(false)}
                 >
                     <div
-                        className={
-                            `rounded-md ring-1 ring-black ring-opacity-5 ` +
-                            contentClasses
-                        }
+                        style={{
+                            borderRadius: '6px',
+                            border: '1px solid rgba(0, 0, 0, 0.05)',
+                            backgroundColor: '#fff',
+                        }}
                     >
                         {children}
                     </div>
                 </div>
-            </Transition>
+            )}
         </>
     );
 };

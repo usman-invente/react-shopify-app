@@ -2,7 +2,6 @@ import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
-import { Transition } from '@headlessui/react';
 import { useForm } from '@inertiajs/react';
 import { useRef } from 'react';
 
@@ -124,17 +123,11 @@ export default function UpdatePasswordForm({ className = '' }) {
                 <div className="flex items-center gap-4">
                     <PrimaryButton disabled={processing}>Save</PrimaryButton>
 
-                    <Transition
-                        show={recentlySuccessful}
-                        enter="transition ease-in-out"
-                        enterFrom="opacity-0"
-                        leave="transition ease-in-out"
-                        leaveTo="opacity-0"
-                    >
-                        <p className="text-sm text-gray-600">
+                    {recentlySuccessful && (
+                        <p className="text-sm text-gray-600" style={{ opacity: recentlySuccessful ? 1 : 0, transition: 'opacity 0.3s ease-in-out' }}>
                             Saved.
                         </p>
-                    </Transition>
+                    )}
                 </div>
             </form>
         </section>
