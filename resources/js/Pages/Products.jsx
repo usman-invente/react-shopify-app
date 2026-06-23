@@ -98,12 +98,12 @@ export default function Products() {
         try {
             setLoading(true);
             const response = await fetch('/api/products');
+            const data = await response.json();
 
             if (!response.ok) {
-                throw new Error('Failed to fetch products');
+                throw new Error(data.error || 'Failed to fetch products');
             }
 
-            const data = await response.json();
             setProducts(data.products || []);
             setError(null);
         } catch (err) {
@@ -149,7 +149,7 @@ export default function Products() {
                     </div>
                 ) : products.length === 0 ? (
                     <div style={styles.loading}>
-                        No products found. Make sure your Shopify API credentials are configured.
+                        No products found. Connect your store on the Connector page, or add products in Shopify.
                     </div>
                 ) : (
                     <div style={styles.container}>
@@ -175,9 +175,9 @@ export default function Products() {
                                     <div style={styles.productTitle} title={product.title}>
                                         {product.title}
                                     </div>
-                                    {product.variants && product.variants[0] && (
+                                    {product.price && (
                                         <div style={styles.productPrice}>
-                                            ${product.variants[0].price}
+                                            ${product.price}
                                         </div>
                                     )}
                                     <div style={styles.productStatus}>

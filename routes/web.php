@@ -6,10 +6,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/app', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['verify.shopify'])->name('home');
-
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -26,6 +22,10 @@ Route::get('/dashboard', function () {
 Route::get('/products', function () {
     return Inertia::render('Products');
 })->middleware(['auth', 'verified'])->name('products');
+
+Route::get('/app', function () {
+    return Inertia::render('Dashboard');
+})->middleware(['verify.shopify'])->name('app');
 
 Route::get('/connector', function () {
     return Inertia::render('Connector');

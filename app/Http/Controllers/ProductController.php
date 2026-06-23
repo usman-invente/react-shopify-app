@@ -16,14 +16,21 @@ class ProductController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $shop = Auth::user();
+            $user = Auth::user();
 
-            if (!$shop) {
+            if (!$user) {
                 Log::warning('Unauthorized product fetch attempt');
                 return response()->json(['error' => 'Unauthenticated'], 401);
             }
 
-            // Use service to fetch products
+            $shop = $user->shop;
+
+            if (!$shop) {
+                return response()->json([
+                    'error' => 'No Shopify store connected. Go to Connector to link your store.',
+                ], 422);
+            }
+
             $service = new ShopifyProductService($shop);
             $products = $service->getProducts();
 

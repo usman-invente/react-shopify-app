@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Models\Shop as ShopModel;
 use Exception;
 use Gnikyt\BasicShopifyAPI\Session;
 use Illuminate\Support\Facades\Log;
@@ -64,6 +65,15 @@ class InstallShop extends BaseInstallShop
             $this->persistShopifyOAuthTokens($shop, $data, $grantMode);
 
             try {
+                $this->linkShopToConnectingUser($shop->getDomain()->toNative());
+            } catch (Exception $e) {
+                Log::warning('Could not link shop to user after OAuth', [
+                    'shop' => $shopDomain->toNative(),
+                    'message' => $e->getMessage(),
+                ]);
+            }
+
+            try {
                 $themeSupportLevel = call_user_func($this->verifyThemeSupport, $shop->getId());
                 $this->shopCommand->setThemeSupportLevel($shop->getId(), ThemeSupportLevel::fromNative($themeSupportLevel));
             } catch (Exception $e) {
@@ -91,5 +101,22 @@ class InstallShop extends BaseInstallShop
                 'theme_support_level' => null,
             ];
         }
+    }
+
+    private function linkShopToConnectingUser(string $shopDomain): void
+    {
+        $userId = session('shop_connect_user_id');
+
+        if (!$userId) {
+            return;
+        }
+
+        ShopModel::where('name', $shopDomain)->update(['user_id' => $userId]);
+        session()->forget('shop_connect_user_id');
+
+        Log::info('Linked Shopify shop to user', [
+            'shop_domain' => $shopDomain,
+            'user_id' => $userId,
+        ]);
     }
 }
