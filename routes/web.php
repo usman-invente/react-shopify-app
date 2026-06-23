@@ -23,6 +23,10 @@ Route::get('/products', function () {
     return Inertia::render('Products');
 })->middleware(['auth', 'verified'])->name('products');
 
+Route::get('/connector', function () {
+    return Inertia::render('Connector');
+})->middleware(['auth', 'verified'])->name('connector');
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
