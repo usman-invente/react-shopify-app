@@ -1,16 +1,39 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import { Link } from '@inertiajs/react';
 
+const styles = {
+    container: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        backgroundColor: '#f5f5f5',
+        padding: '20px',
+    },
+    logo: {
+        marginBottom: '60px',
+    },
+    card: {
+        width: '100%',
+        maxWidth: '400px',
+        backgroundColor: '#fff',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+        padding: '40px 32px',
+    },
+};
+
 export default function GuestLayout({ children }) {
     return (
-        <div className="flex min-h-screen flex-col items-center bg-gray-100 pt-6 sm:justify-center sm:pt-0">
-            <div>
+        <div style={styles.container}>
+            <div style={styles.logo}>
                 <Link href="/">
-                    <ApplicationLogo className="h-20 w-20 fill-current text-gray-500" />
+                    <ApplicationLogo style={{ height: '50px', width: '50px', display: 'block' }} />
                 </Link>
             </div>
 
-            <div className="mt-6 w-full overflow-hidden bg-white px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg">
+            <div style={styles.card}>
                 {children}
             </div>
         </div>
