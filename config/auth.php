@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Models\Shop;
 
 return [
 
@@ -42,6 +43,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        'shopify' => [
+            'driver' => 'session',
+            'provider' => 'shops',
+        ],
     ],
 
     /*
@@ -65,6 +71,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
+        ],
+
+        'shops' => [
+            'driver' => 'eloquent',
+            'model' => Shop::class,
         ],
 
         // 'users' => [

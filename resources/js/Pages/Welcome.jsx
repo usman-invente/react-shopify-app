@@ -1,5 +1,4 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
 
 const styles = {
     page: {
@@ -123,31 +122,6 @@ const styles = {
 };
 
 export default function Welcome({ auth }) {
-    const [shopDomain, setShopDomain] = useState('');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    const handleConnect = (e) => {
-        e.preventDefault();
-        setError('');
-
-        if (!shopDomain.trim()) {
-            setError('Please enter your shop domain');
-            return;
-        }
-
-        let domain = shopDomain.trim().toLowerCase();
-        if (!domain.includes('.myshopify.com')) {
-            if (domain.includes('.')) {
-                domain = domain.split('.')[0];
-            }
-            domain = `${domain}.myshopify.com`;
-        }
-
-        setLoading(true);
-        window.location.href = `/authenticate?shop=${encodeURIComponent(domain)}`;
-    };
-
     if (auth.user) {
         return (
             <>
@@ -195,7 +169,7 @@ export default function Welcome({ auth }) {
 
     return (
         <>
-            <Head title="Connect Shopify Store" />
+            <Head title="Shopify Product Manager" />
             <div style={styles.page}>
                 <div style={styles.navbar}>
                     <div style={styles.logo}>🛒 Shopify</div>
@@ -213,37 +187,46 @@ export default function Welcome({ auth }) {
                     <div style={styles.content}>
                         <div style={styles.header}>
                             <div style={styles.icon}>🛍️</div>
-                            <div style={styles.badge}>Quick Setup</div>
-                            <h1 style={styles.title}>Connect Your Store</h1>
+                            <div style={styles.badge}>Product Manager</div>
+                            <h1 style={styles.title}>Manage Your Shopify Store</h1>
                             <p style={styles.subtitle}>
-                                Manage your Shopify products in one place. Enter your store domain to get started.
+                                Easily manage and view all your Shopify products in one place. Sign in to get started.
                             </p>
                         </div>
 
-                        {error && <div style={styles.error}>⚠️ {error}</div>}
-
-                        <form style={styles.form} onSubmit={handleConnect}>
-                            <input
-                                type="text"
-                                style={styles.input}
-                                placeholder="example.myshopify.com"
-                                value={shopDomain}
-                                onChange={(e) => setShopDomain(e.target.value)}
-                                disabled={loading}
-                            />
-                            <button
-                                type="submit"
-                                style={styles.button}
-                                disabled={loading}
-                                onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#1f2937')}
+                        <div style={styles.form}>
+                            <Link
+                                href={route('login')}
+                                style={{
+                                    ...styles.button,
+                                    textDecoration: 'none',
+                                    display: 'block',
+                                    textAlign: 'center',
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#1f2937'}
                                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#000'}
                             >
-                                {loading ? '⏳ Connecting...' : '🔗 Connect Store'}
-                            </button>
-                        </form>
+                                Sign In
+                            </Link>
+                            <Link
+                                href={route('register')}
+                                style={{
+                                    ...styles.button,
+                                    textDecoration: 'none',
+                                    display: 'block',
+                                    textAlign: 'center',
+                                    backgroundColor: '#e5e7eb',
+                                    color: '#000',
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#d1d5db'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#e5e7eb'}
+                            >
+                                Create Account
+                            </Link>
+                        </div>
 
                         <div style={styles.footer}>
-                            <p>You'll be redirected to Shopify to authorize the app securely</p>
+                            <p>✨ Connect your Shopify store after signing in</p>
                         </div>
                     </div>
                 </div>

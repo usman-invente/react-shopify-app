@@ -96,7 +96,7 @@ return [
     | If you need to keep User model intact, add custom auth provider and route middlewares for it
     |
     */
-    'shop_auth_provider' => env('SHOPIFY_SHOP_AUTH_PROVIDER', 'users'),
+    'shop_auth_provider' => env('SHOPIFY_SHOP_AUTH_PROVIDER', 'shops'),
 
     /*
     |--------------------------------------------------------------------------
@@ -584,7 +584,7 @@ return [
         /*
          * The table name for the Shop.
          */
-        'shops' => 'users',
+        'shops' => 'shops',
     ],
 
     /*
