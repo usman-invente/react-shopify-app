@@ -1,7 +1,5 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
-import Dropdown from '@/Components/Dropdown';
 import { Link, usePage } from '@inertiajs/react';
-import { Box, Page, TopBar, Navigation } from '@shopify/polaris';
 import { useState } from 'react';
 
 const styles = {
@@ -81,29 +79,82 @@ export default function AuthenticatedLayout({ header, children }) {
 
                     <div style={styles.navRight}>
                         <div style={{ position: 'relative' }}>
-                            <Dropdown>
-                                <Dropdown.Trigger>
-                                    <button style={styles.userButton}>
-                                        {user.name}
-                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
-                                            <path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                                        </svg>
-                                    </button>
-                                </Dropdown.Trigger>
+                            <button
+                                style={styles.userButton}
+                                onClick={() => setDropdownOpen(!dropdownOpen)}
+                            >
+                                {user.name}
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
+                                    <path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+                                </svg>
+                            </button>
 
-                                <Dropdown.Content>
-                                    <Dropdown.Link href={route('profile.edit')}>
-                                        Profile
-                                    </Dropdown.Link>
-                                    <Dropdown.Link
-                                        href={route('logout')}
-                                        method="post"
-                                        as="button"
+                            {dropdownOpen && (
+                                <>
+                                    <div
+                                        style={{
+                                            position: 'fixed',
+                                            inset: 0,
+                                            zIndex: 40,
+                                        }}
+                                        onClick={() => setDropdownOpen(false)}
+                                    />
+                                    <div
+                                        style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            right: 0,
+                                            zIndex: 50,
+                                            backgroundColor: '#fff',
+                                            borderRadius: '6px',
+                                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                            minWidth: '200px',
+                                            marginTop: '8px',
+                                            border: '1px solid #e5e7eb',
+                                            overflow: 'hidden',
+                                        }}
                                     >
-                                        Log Out
-                                    </Dropdown.Link>
-                                </Dropdown.Content>
-                            </Dropdown>
+                                        <Link
+                                            href={route('profile.edit')}
+                                            style={{
+                                                display: 'block',
+                                                padding: '12px 16px',
+                                                fontSize: '14px',
+                                                color: '#333',
+                                                textDecoration: 'none',
+                                                borderBottom: '1px solid #e5e7eb',
+                                                transition: 'background-color 0.2s',
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                            Profile
+                                        </Link>
+                                        <Link
+                                            href={route('logout')}
+                                            method="post"
+                                            as="button"
+                                            style={{
+                                                display: 'block',
+                                                width: '100%',
+                                                padding: '12px 16px',
+                                                fontSize: '14px',
+                                                color: '#333',
+                                                textDecoration: 'none',
+                                                background: 'none',
+                                                border: 'none',
+                                                textAlign: 'left',
+                                                cursor: 'pointer',
+                                                transition: 'background-color 0.2s',
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
+                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                        >
+                                            Log Out
+                                        </Link>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
