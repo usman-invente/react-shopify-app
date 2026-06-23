@@ -56,3 +56,20 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+How it works:
+Authentication Flow:
+
+Package uses Shopify's session tokens (JWT)
+Tokens auto-refresh every 2 seconds
+Offline token stored on first install
+
+To activate:
+
+Add your Shopify credentials to .env:
+
+
+SHOPIFY_API_KEY="your_key"
+SHOPIFY_API_SECRET="your_secret"
+SHOPIFY_API_SCOPES="write_products,read_products"
+Then visit /products

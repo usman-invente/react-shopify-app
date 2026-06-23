@@ -75,6 +75,9 @@ export default function AuthenticatedLayout({ header, children }) {
                         <Link href={route('dashboard')} style={{ fontSize: '14px', color: route().current('dashboard') ? '#000' : '#666', fontWeight: route().current('dashboard') ? '500' : '400', textDecoration: 'none' }}>
                             Dashboard
                         </Link>
+                        <Link href={route('products')} style={{ fontSize: '14px', color: route().current('products') ? '#000' : '#666', fontWeight: route().current('products') ? '500' : '400', textDecoration: 'none' }}>
+                            Products
+                        </Link>
                     </div>
 
                     <div style={styles.navRight}>
