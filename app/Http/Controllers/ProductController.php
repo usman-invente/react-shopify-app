@@ -91,6 +91,13 @@ class ProductController extends Controller
                 return response()->json(['error' => 'No Shopify store connected'], 422);
             }
 
+            Log::info('Update request received', [
+                'product_id' => $productId,
+                'has_files' => count(request()->files->all()),
+                'all_keys' => array_keys(request()->all()),
+                'files_keys' => array_keys(request()->files->all()),
+            ]);
+
             $data = request()->validate([
                 'title' => 'sometimes|string',
                 'vendor' => 'sometimes|string',
@@ -192,6 +199,54 @@ class ProductController extends Controller
                         ]);
                         return response()->json(['error' => 'Failed to update price: ' . $e->getMessage()], 500);
                     }
+                }
+            }
+
+            // If image file is being uploaded, replace the existing image
+            Log::info('Checking for image file', ['has_file' => request()->hasFile('imageFile')]);
+
+            if (request()->hasFile('imageFile')) {
+                Log::info('Replacing product image via REST API', [
+                    'product_id' => $productId,
+                    'shop_id' => $shop->id,
+                ]);
+
+                try {
+                    $file = request()->file('imageFile');
+                    $fileContent = file_get_contents($file->getPathname());
+                    $base64Image = base64_encode($fileContent);
+                    $numericProductId = explode('/', $productId)[4] ?? $productId;
+
+                    // Get all existing images so we can delete them after upload
+                    $existingImages = $shop->api()->rest('GET', '/admin/api/2024-01/products/' . $numericProductId . '/images.json');
+                    $oldImageIds = [];
+                    if (isset($existingImages['body']['images'])) {
+                        foreach ($existingImages['body']['images'] as $img) {
+                            $oldImageIds[] = $img['id'];
+                        }
+                    }
+
+                    // Upload the new image
+                    $response = $shop->api()->rest('POST', '/admin/api/2024-01/products/' . $numericProductId . '/images.json', [
+                        'image' => [
+                            'attachment' => $base64Image,
+                            'position' => 1,
+                        ]
+                    ]);
+
+                    Log::info('Product image uploaded successfully', ['response' => $response]);
+
+                    // Delete all old images
+                    foreach ($oldImageIds as $oldImageId) {
+                        $shop->api()->rest('DELETE', '/admin/api/2024-01/products/' . $numericProductId . '/images/' . $oldImageId . '.json');
+                        Log::info('Deleted old image', ['image_id' => $oldImageId]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Error replacing product image', [
+                        'error' => $e->getMessage(),
+                        'product_id' => $productId,
+                    ]);
+                    return response()->json(['error' => 'Failed to update image: ' . $e->getMessage()], 500);
                 }
             }
 

@@ -13,6 +13,7 @@ import {
     Text,
     TextField,
     Thumbnail,
+    DropZone,
 } from '@shopify/polaris';
 
 const resourceName = {
@@ -51,9 +52,10 @@ export default function Products() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [editingProduct, setEditingProduct] = useState(null);
-    const [editFormData, setEditFormData] = useState({ title: '', vendor: '', price: '' });
+    const [editFormData, setEditFormData] = useState({ title: '', vendor: '', price: '', imageFile: null });
     const [updatingProduct, setUpdatingProduct] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [imagePreview, setImagePreview] = useState(null);
 
     const filteredProducts = useMemo(() => {
         if (!searchQuery.trim()) {
@@ -101,12 +103,27 @@ export default function Products() {
             title: product.title || '',
             vendor: product.vendor || '',
             price: product.price || '',
+            imageFile: null,
         });
+        setImagePreview(product.image?.src || null);
     };
 
     const closeEditModal = () => {
         setEditingProduct(null);
-        setEditFormData({ title: '', vendor: '', price: '' });
+        setEditFormData({ title: '', vendor: '', price: '', imageFile: null });
+        setImagePreview(null);
+    };
+
+    const handleImageUpload = (files) => {
+        const file = files[0];
+        if (file) {
+            setEditFormData({ ...editFormData, imageFile: file });
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                setImagePreview(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleUpdateProduct = async () => {
@@ -114,14 +131,20 @@ export default function Products() {
 
         try {
             setUpdatingProduct(true);
+
+            const formData = new FormData();
+            formData.append('_method', 'PUT');
+            formData.append('title', editFormData.title);
+            formData.append('vendor', editFormData.vendor);
+            formData.append('price', editFormData.price);
+            if (editFormData.imageFile) {
+                formData.append('imageFile', editFormData.imageFile);
+            }
+
             const response = await fetch(`/api/products/${editingProduct.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                },
+                method: 'POST',
                 credentials: 'same-origin',
-                body: JSON.stringify(editFormData),
+                body: formData,
             });
 
             const data = await response.json();
@@ -299,6 +322,41 @@ export default function Products() {
                             min="0"
                             autoComplete="off"
                         />
+                    </div>
+                    <div style={{ marginTop: '16px' }}>
+                        <Text variant="bodySm" fontWeight="semibold" as="p">
+                            Product Image
+                        </Text>
+                        <DropZone
+                            onDrop={handleImageUpload}
+                            accept="image/*"
+                            errorOverlayText="File type must be an image"
+                            type="image"
+                        >
+                            {imagePreview ? (
+                                <div style={{ padding: '16px' }}>
+                                    <Thumbnail
+                                        source={imagePreview}
+                                        alt="Product image preview"
+                                        size="large"
+                                    />
+                                    <Button
+                                        onClick={() => {
+                                            setEditFormData({ ...editFormData, imageFile: null });
+                                            setImagePreview(null);
+                                        }}
+                                        destructive
+                                        plain
+                                        size="slim"
+                                        style={{ marginTop: '8px' }}
+                                    >
+                                        Remove
+                                    </Button>
+                                </div>
+                            ) : (
+                                <DropZone.FileUpload />
+                            )}
+                        </DropZone>
                     </div>
                 </Modal.Section>
             </Modal>
