@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ShopifyApiException;
+use App\Services\ShopifyProductService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
     /**
-     * Fetch products from Shopify using GraphQL
+     * Fetch products from Shopify
      */
     public function index(): JsonResponse
     {
@@ -16,87 +19,29 @@ class ProductController extends Controller
             $shop = Auth::user();
 
             if (!$shop) {
-                return response()->json(['error' => 'Not authenticated'], 401);
+                Log::warning('Unauthorized product fetch attempt');
+                return response()->json(['error' => 'Unauthenticated'], 401);
             }
 
-            // GraphQL query to fetch products
-            $query = <<<'QUERY'
-            {
-                products(first: 50) {
-                    edges {
-                        node {
-                            id
-                            title
-                            status
-                            handle
-                            variants(first: 1) {
-                                edges {
-                                    node {
-                                        id
-                                        price
-                                    }
-                                }
-                            }
-                            images(first: 1) {
-                                edges {
-                                    node {
-                                        src
-                                        altText
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            QUERY;
+            // Use service to fetch products
+            $service = new ShopifyProductService($shop);
+            $products = $service->getProducts();
 
-            // Execute GraphQL query
-            $response = $shop->api()->graph($query);
+            return response()->json(['products' => $products->toArray()]);
+        } catch (ShopifyApiException $e) {
+            Log::error('Shopify API error', [
+                'message' => $e->getMessage(),
+                'user_id' => Auth::id(),
+            ]);
 
-            if (!isset($response['body']['data']['products'])) {
-                return response()->json(['products' => [], 'error' => 'Could not fetch products'], 200);
-            }
-
-            // Transform GraphQL response into simpler format
-            $products = [];
-            foreach ($response['body']['data']['products']['edges'] as $edge) {
-                $node = $edge['node'];
-                $product = [
-                    'id' => $node['id'],
-                    'title' => $node['title'],
-                    'status' => strtolower($node['status']),
-                    'handle' => $node['handle'],
-                ];
-
-                // Get price from first variant
-                if (!empty($node['variants']['edges'])) {
-                    $product['variants'] = [
-                        [
-                            'id' => $node['variants']['edges'][0]['node']['id'],
-                            'price' => $node['variants']['edges'][0]['node']['price'],
-                        ],
-                    ];
-                } else {
-                    $product['variants'] = [];
-                }
-
-                // Get image
-                if (!empty($node['images']['edges'])) {
-                    $product['image'] = [
-                        'src' => $node['images']['edges'][0]['node']['src'],
-                        'alt' => $node['images']['edges'][0]['node']['altText'],
-                    ];
-                } else {
-                    $product['image'] = null;
-                }
-
-                $products[] = $product;
-            }
-
-            return response()->json(['products' => $products]);
+            return response()->json(['error' => 'Failed to fetch products'], 500);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            Log::error('Unexpected error in ProductController', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json(['error' => 'An unexpected error occurred'], 500);
         }
     }
 }
