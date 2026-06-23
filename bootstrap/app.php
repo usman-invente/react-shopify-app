@@ -18,7 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\RememberConnectingUser::class,
         ]);
 
-        //
+        $middleware->alias([
+            'auth.or.shop' => \App\Http\Middleware\AuthenticateShopOrUser::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

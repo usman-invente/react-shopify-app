@@ -15,29 +15,26 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::middleware('auth')->group(function () {
+    Route::get('/dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->name('dashboard');
+
+    Route::get('/connector', function () {
+        return Inertia::render('Connector');
+    })->name('connector');
+});
 
 Route::get('/products', function () {
     return Inertia::render('Products');
-})->middleware(['auth', 'verified'])->name('products');
+})->middleware(['auth.or.shop'])->name('products');
 
-Route::get('/app', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['verify.shopify'])->name('app');
-
-Route::get('/connector', function () {
-    return Inertia::render('Connector');
-})->middleware(['auth', 'verified'])->name('connector');
+Route::get('/api/products', [ProductController::class, 'index'])->middleware(['auth.or.shop']);
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
-    // API endpoint for fetching products
-    Route::get('/api/products', [ProductController::class, 'index']);
 });
 
 require __DIR__.'/auth.php';

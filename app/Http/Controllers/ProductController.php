@@ -23,7 +23,13 @@ class ProductController extends Controller
                 return response()->json(['error' => 'Unauthenticated'], 401);
             }
 
-            $shop = $user->shop;
+            $shop = null;
+
+            if ($user instanceof \App\Models\Shop) {
+                $shop = $user;
+            } elseif (method_exists($user, 'shop') && $user->shop) {
+                $shop = $user->shop;
+            }
 
             if (!$shop) {
                 return response()->json([
