@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ConnectorController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductController;
 use Illuminate\Foundation\Application;
@@ -20,9 +21,8 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
-    Route::get('/connector', function () {
-        return Inertia::render('Connector');
-    })->name('connector');
+    Route::get('/connector', [ConnectorController::class, 'index'])->name('connector');
+    Route::post('/connector/uninstall', [ConnectorController::class, 'uninstall'])->name('connector.uninstall');
 });
 
 Route::get('/products', function () {

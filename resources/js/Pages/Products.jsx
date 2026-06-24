@@ -52,7 +52,7 @@ export default function Products() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [editingProduct, setEditingProduct] = useState(null);
-    const [editFormData, setEditFormData] = useState({ title: '', vendor: '', price: '', imageFile: null });
+    const [editFormData, setEditFormData] = useState({ title: '', vendor: '', price: '', inventory: '', imageFile: null });
     const [updatingProduct, setUpdatingProduct] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [imagePreview, setImagePreview] = useState(null);
@@ -103,6 +103,7 @@ export default function Products() {
             title: product.title || '',
             vendor: product.vendor || '',
             price: product.price || '',
+            inventory: product.inventory ?? '',
             imageFile: null,
         });
         setImagePreview(product.image?.src || null);
@@ -110,7 +111,7 @@ export default function Products() {
 
     const closeEditModal = () => {
         setEditingProduct(null);
-        setEditFormData({ title: '', vendor: '', price: '', imageFile: null });
+        setEditFormData({ title: '', vendor: '', price: '', inventory: '', imageFile: null });
         setImagePreview(null);
     };
 
@@ -129,19 +130,35 @@ export default function Products() {
     const handleUpdateProduct = async () => {
         if (!editingProduct) return;
 
+        // Capture before any state changes
+        const productId = editingProduct.id;
+        const updates = {
+            title: editFormData.title,
+            vendor: editFormData.vendor,
+            price: editFormData.price,
+            inventory: editFormData.inventory,
+            imageFile: editFormData.imageFile,
+            imagePreview: imagePreview,
+        };
+
         try {
             setUpdatingProduct(true);
 
             const formData = new FormData();
             formData.append('_method', 'PUT');
-            formData.append('title', editFormData.title);
-            formData.append('vendor', editFormData.vendor);
-            formData.append('price', editFormData.price);
-            if (editFormData.imageFile) {
-                formData.append('imageFile', editFormData.imageFile);
+            formData.append('title', updates.title);
+            formData.append('vendor', updates.vendor);
+            if (updates.price !== '') {
+                formData.append('price', updates.price);
+            }
+            if (updates.inventory !== '') {
+                formData.append('inventory', updates.inventory);
+            }
+            if (updates.imageFile) {
+                formData.append('imageFile', updates.imageFile);
             }
 
-            const response = await fetch(`/api/products/${editingProduct.id}`, {
+            const response = await fetch(`/api/products/${productId}`, {
                 method: 'POST',
                 credentials: 'same-origin',
                 body: formData,
@@ -153,9 +170,24 @@ export default function Products() {
                 throw new Error(data.error || 'Failed to update product');
             }
 
+            // Use server-confirmed values — avoids Shopify's stale totalInventory GraphQL cache
+            const confirmed = data.updated || {};
+            setProducts((prev) =>
+                prev.map((p) =>
+                    p.id === productId
+                        ? {
+                              ...p,
+                              ...(confirmed.title     ? { title: confirmed.title }                : {}),
+                              ...(confirmed.vendor    ? { vendor: confirmed.vendor }              : {}),
+                              ...(confirmed.price     ? { price: confirmed.price }                : {}),
+                              ...(confirmed.inventory !== null ? { inventory: confirmed.inventory } : {}),
+                              ...(updates.imageFile   ? { image: { ...p.image, src: updates.imagePreview } } : {}),
+                          }
+                        : p
+                )
+            );
             setError(null);
             closeEditModal();
-            await fetchProducts();
         } catch (err) {
             setError(err.message);
         } finally {
@@ -167,7 +199,7 @@ export default function Products() {
         <IndexTable.Row id={String(product.id)} key={product.id} position={index}>
             <IndexTable.Cell>
                 <Thumbnail
-                    source={product.image?.src}
+                    source={product.image?.src || ''}
                     alt={product.image?.alt || product.title}
                     size="small"
                 />
@@ -203,6 +235,7 @@ export default function Products() {
     return (
         <AuthenticatedLayout header="Products">
             <Head title="Products" />
+            <style>{`.Polaris-Page { max-width: 100% !important; }`}</style>
 
             {error && (
                 <div style={{ marginBottom: '16px' }}>
@@ -319,6 +352,16 @@ export default function Products() {
                             onChange={(value) => setEditFormData({ ...editFormData, price: value })}
                             type="number"
                             step="0.01"
+                            min="0"
+                            autoComplete="off"
+                        />
+                    </div>
+                    <div style={{ marginTop: '16px' }}>
+                        <TextField
+                            label="Inventory Quantity"
+                            value={String(editFormData.inventory)}
+                            onChange={(value) => setEditFormData({ ...editFormData, inventory: value })}
+                            type="number"
                             min="0"
                             autoComplete="off"
                         />

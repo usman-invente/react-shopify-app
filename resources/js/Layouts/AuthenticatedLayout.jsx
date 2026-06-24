@@ -1,184 +1,99 @@
-import ApplicationLogo from '@/Components/ApplicationLogo';
-import { Link, usePage } from '@inertiajs/react';
-import { useState } from 'react';
-
-const styles = {
-    navbar: {
-        backgroundColor: '#fff',
-        borderBottom: '1px solid #e5e7eb',
-        padding: '0 16px',
-    },
-    navbarContent: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        height: '64px',
-        maxWidth: '1280px',
-        margin: '0 auto',
-    },
-    navLeft: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '32px',
-    },
-    navRight: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-    },
-    userButton: {
-        backgroundColor: 'transparent',
-        border: 'none',
-        padding: '8px 12px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        color: '#666',
-        borderRadius: '4px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        transition: 'background-color 0.2s',
-    },
-    mainContent: {
-        padding: '24px 16px',
-        maxWidth: '1280px',
-        margin: '0 auto',
-    },
-    header: {
-        backgroundColor: '#fff',
-        padding: '24px 16px',
-        borderBottom: '1px solid #e5e7eb',
-        marginBottom: '24px',
-    },
-    headerTitle: {
-        fontSize: '24px',
-        fontWeight: '600',
-        color: '#000',
-        maxWidth: '1280px',
-        margin: '0 auto',
-    },
-};
+import { Link, usePage, router } from '@inertiajs/react';
+import { useState, useCallback } from 'react';
+import { Frame, TopBar, Navigation, Text } from '@shopify/polaris';
+import {
+    HomeIcon,
+    ConnectIcon,
+    ProductIcon,
+} from '@shopify/polaris-icons';
 
 export default function AuthenticatedLayout({ header, children }) {
     const user = usePage().props.auth.user;
-    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+    const toggleUserMenu = useCallback(() => setUserMenuOpen((open) => !open), []);
+    const toggleMobileNav = useCallback(() => setMobileNavOpen((open) => !open), []);
+
+    const userMenuMarkup = (
+        <TopBar.UserMenu
+            actions={[
+                {
+                    items: [
+                        {
+                            content: 'Profile',
+                            onAction: () => router.visit(route('profile.edit')),
+                        },
+                    ],
+                },
+                {
+                    items: [
+                        {
+                            content: 'Log out',
+                            onAction: () => router.post(route('logout')),
+                        },
+                    ],
+                },
+            ]}
+            name={user.name}
+            initials={user.name.charAt(0).toUpperCase()}
+            open={userMenuOpen}
+            onToggle={toggleUserMenu}
+        />
+    );
+
+    const topBarMarkup = (
+        <TopBar
+            showNavigationToggle
+            userMenu={userMenuMarkup}
+            onNavigationToggle={toggleMobileNav}
+        />
+    );
+
+    const navigationMarkup = (
+        <Navigation location={window.location.pathname}>
+            <Navigation.Section
+                items={[
+                    {
+                        label: 'Dashboard',
+                        icon: HomeIcon,
+                        url: route('dashboard'),
+                        selected: route().current('dashboard'),
+                    },
+                    {
+                        label: 'Connector',
+                        icon: ConnectIcon,
+                        url: route('connector'),
+                        selected: route().current('connector'),
+                    },
+                    {
+                        label: 'Products',
+                        icon: ProductIcon,
+                        url: route('products'),
+                        selected: route().current('products'),
+                    },
+                ]}
+            />
+        </Navigation>
+    );
 
     return (
-        <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
-            {/* Navigation */}
-            <nav style={styles.navbar}>
-                <div style={styles.navbarContent}>
-                    <div style={styles.navLeft}>
-                        <Link href="/">
-                            <ApplicationLogo style={{ height: '36px', width: '36px', display: 'block' }} />
-                        </Link>
-                        <Link href={route('dashboard')} style={{ fontSize: '14px', color: route().current('dashboard') ? '#000' : '#666', fontWeight: route().current('dashboard') ? '500' : '400', textDecoration: 'none' }}>
-                            Dashboard
-                        </Link>
-                        <Link href={route('connector')} style={{ fontSize: '14px', color: route().current('connector') ? '#000' : '#666', fontWeight: route().current('connector') ? '500' : '400', textDecoration: 'none' }}>
-                            Connector
-                        </Link>
-                        <Link href={route('products')} style={{ fontSize: '14px', color: route().current('products') ? '#000' : '#666', fontWeight: route().current('products') ? '500' : '400', textDecoration: 'none' }}>
-                            Products
-                        </Link>
-                    </div>
-
-                    <div style={styles.navRight}>
-                        <div style={{ position: 'relative' }}>
-                            <button
-                                style={styles.userButton}
-                                onClick={() => setDropdownOpen(!dropdownOpen)}
-                            >
-                                {user.name}
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor">
-                                    <path d="M4 6l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
-                                </svg>
-                            </button>
-
-                            {dropdownOpen && (
-                                <>
-                                    <div
-                                        style={{
-                                            position: 'fixed',
-                                            inset: 0,
-                                            zIndex: 40,
-                                        }}
-                                        onClick={() => setDropdownOpen(false)}
-                                    />
-                                    <div
-                                        style={{
-                                            position: 'absolute',
-                                            top: '100%',
-                                            right: 0,
-                                            zIndex: 50,
-                                            backgroundColor: '#fff',
-                                            borderRadius: '6px',
-                                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                                            minWidth: '200px',
-                                            marginTop: '8px',
-                                            border: '1px solid #e5e7eb',
-                                            overflow: 'hidden',
-                                        }}
-                                    >
-                                        <Link
-                                            href={route('profile.edit')}
-                                            style={{
-                                                display: 'block',
-                                                padding: '12px 16px',
-                                                fontSize: '14px',
-                                                color: '#333',
-                                                textDecoration: 'none',
-                                                borderBottom: '1px solid #e5e7eb',
-                                                transition: 'background-color 0.2s',
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                        >
-                                            Profile
-                                        </Link>
-                                        <Link
-                                            href={route('logout')}
-                                            method="post"
-                                            as="button"
-                                            style={{
-                                                display: 'block',
-                                                width: '100%',
-                                                padding: '12px 16px',
-                                                fontSize: '14px',
-                                                color: '#333',
-                                                textDecoration: 'none',
-                                                background: 'none',
-                                                border: 'none',
-                                                textAlign: 'left',
-                                                cursor: 'pointer',
-                                                transition: 'background-color 0.2s',
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
-                                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                                        >
-                                            Log Out
-                                        </Link>
-                                    </div>
-                                </>
-                            )}
+        <div style={{ height: '100vh' }}>
+            <Frame
+                topBar={topBarMarkup}
+                navigation={navigationMarkup}
+                showMobileNavigation={mobileNavOpen}
+                onNavigationDismiss={toggleMobileNav}
+            >
+                <div style={{ padding: '20px 32px', maxWidth: '100%' }}>
+                    {header && (
+                        <div style={{ marginBottom: '20px' }}>
+                            <Text variant="headingXl" as="h1">{header}</Text>
                         </div>
-                    </div>
+                    )}
+                    {children}
                 </div>
-            </nav>
-
-            {/* Header */}
-            {header && (
-                <header style={styles.header}>
-                    <div style={styles.headerTitle}>
-                        {header}
-                    </div>
-                </header>
-            )}
-
-            {/* Main Content */}
-            <main style={styles.mainContent}>
-                {children}
-            </main>
+            </Frame>
         </div>
     );
 }

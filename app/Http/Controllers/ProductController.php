@@ -102,6 +102,7 @@ class ProductController extends Controller
                 'title' => 'sometimes|string',
                 'vendor' => 'sometimes|string',
                 'price' => 'sometimes|numeric',
+                'inventory' => 'sometimes|numeric|min:0',
             ]);
 
             // First, update product title and vendor
@@ -202,6 +203,86 @@ class ProductController extends Controller
                 }
             }
 
+            // If inventory is being updated, fetch inventory_item_id and set quantity via REST API
+            Log::info('Inventory check', ['inventory_value' => request()->input('inventory'), 'in_data' => isset($data['inventory'])]);
+
+            if (isset($data['inventory']) && $data['inventory'] !== '') {
+                try {
+                    $numericProductId = explode('/', $productId)[4] ?? $productId;
+
+                    // Get variant with inventory_item_id
+                    $variantRes = $shop->api()->rest('GET', '/admin/api/2024-01/products/' . $numericProductId . '/variants.json');
+                    $variantBody = json_decode(json_encode($variantRes['body']), true);
+                    $variant = $variantBody['variants'][0] ?? null;
+                    $inventoryItemId = $variant['inventory_item_id'] ?? null;
+                    $variantNumericId = $variant['id'] ?? null;
+
+                    Log::info('Variant info for inventory', [
+                        'variant_id' => $variantNumericId,
+                        'inventory_item_id' => $inventoryItemId,
+                        'inventory_management' => $variant['inventory_management'] ?? 'null',
+                    ]);
+
+                    if ($inventoryItemId) {
+                        // Enable inventory tracking if not already enabled
+                        if (empty($variant['inventory_management'])) {
+                            $shop->api()->rest('PUT', '/admin/api/2024-01/variants/' . $variantNumericId . '.json', [
+                                'variant' => [
+                                    'id' => $variantNumericId,
+                                    'inventory_management' => 'shopify',
+                                ]
+                            ]);
+                            Log::info('Enabled inventory tracking on variant', ['variant_id' => $variantNumericId]);
+                        }
+
+                        // Get location ID via inventoryItem's inventory levels (no read_locations scope needed)
+                        $inventoryGid = 'gid://shopify/InventoryItem/' . $inventoryItemId;
+                        $invItemQuery = <<<'QUERY'
+                        query getInventoryItem($id: ID!) {
+                            inventoryItem(id: $id) {
+                                inventoryLevels(first: 1) {
+                                    edges {
+                                        node {
+                                            location {
+                                                id
+                                                legacyResourceId
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        QUERY;
+
+                        $invItemRes = $shop->api()->graph($invItemQuery, ['id' => $inventoryGid]);
+                        Log::info('InventoryItem GraphQL response', ['body' => json_encode($invItemRes['body'])]);
+                        $locationId = null;
+                        if (isset($invItemRes['body']['data']['inventoryItem']['inventoryLevels']['edges'][0]['node']['location']['legacyResourceId'])) {
+                            $locationId = (int)$invItemRes['body']['data']['inventoryItem']['inventoryLevels']['edges'][0]['node']['location']['legacyResourceId'];
+                        }
+
+                        Log::info('Setting inventory level', [
+                            'location_id' => $locationId,
+                            'inventory_item_id' => $inventoryItemId,
+                            'quantity' => (int)$data['inventory'],
+                        ]);
+
+                        if ($locationId) {
+                            $invResponse = $shop->api()->rest('POST', '/admin/api/2024-01/inventory_levels/set.json', [
+                                'location_id' => $locationId,
+                                'inventory_item_id' => $inventoryItemId,
+                                'available' => (int)$data['inventory'],
+                            ]);
+
+                            Log::info('Inventory updated successfully', ['response' => $invResponse]);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Error updating inventory', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                    return response()->json(['error' => 'Failed to update inventory: ' . $e->getMessage()], 500);
+                }
+            }
+
             // If image file is being uploaded, replace the existing image
             Log::info('Checking for image file', ['has_file' => request()->hasFile('imageFile')]);
 
@@ -252,7 +333,16 @@ class ProductController extends Controller
 
             Log::info('Product updated successfully', ['product_id' => $productId, 'shop_id' => $shop->id]);
 
-            return response()->json(['success' => true, 'message' => 'Product updated successfully']);
+            return response()->json([
+                'success' => true,
+                'message' => 'Product updated successfully',
+                'updated' => [
+                    'title'     => $data['title'] ?? null,
+                    'vendor'    => $data['vendor'] ?? null,
+                    'price'     => isset($data['price']) ? (string) $data['price'] : null,
+                    'inventory' => isset($data['inventory']) ? (int) $data['inventory'] : null,
+                ],
+            ]);
         } catch (\Exception $e) {
             Log::error('Error updating product', [
                 'product_id' => $productId,

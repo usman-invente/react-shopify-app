@@ -63,6 +63,19 @@ const styles = {
         cursor: 'pointer',
         transition: 'background-color 0.2s',
     },
+    uninstallButton: {
+        width: '100%',
+        padding: '12px 16px',
+        fontSize: '16px',
+        fontWeight: '600',
+        backgroundColor: '#fff',
+        color: '#dc2626',
+        border: '1px solid #dc2626',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        transition: 'background-color 0.2s, color 0.2s',
+        marginTop: '12px',
+    },
     error: {
         padding: '12px 16px',
         backgroundColor: '#fef2f2',
@@ -89,12 +102,41 @@ const styles = {
         fontWeight: '500',
         marginBottom: '16px',
     },
+    connectedBadge: {
+        display: 'inline-block',
+        backgroundColor: '#ecfdf5',
+        color: '#065f46',
+        padding: '4px 8px',
+        borderRadius: '4px',
+        fontSize: '12px',
+        fontWeight: '500',
+        marginBottom: '16px',
+    },
+    shopName: {
+        fontSize: '16px',
+        fontWeight: '600',
+        color: '#374151',
+        backgroundColor: '#f9fafb',
+        border: '1px solid #e5e7eb',
+        borderRadius: '6px',
+        padding: '12px 16px',
+        marginBottom: '8px',
+        wordBreak: 'break-all',
+    },
+    divider: {
+        border: 'none',
+        borderTop: '1px solid #e5e7eb',
+        margin: '24px 0',
+    },
 };
 
-export default function Connector() {
+export default function Connector({ connectedShop }) {
     const [shopDomain, setShopDomain] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [uninstalling, setUninstalling] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [uninstalledShop, setUninstalledShop] = useState(null);
 
     const handleConnect = (e) => {
         e.preventDefault();
@@ -117,6 +159,43 @@ export default function Connector() {
         window.location.href = `/authenticate?shop=${encodeURIComponent(domain)}`;
     };
 
+    const handleUninstall = async () => {
+        if (!showConfirm) {
+            setShowConfirm(true);
+            return;
+        }
+
+        try {
+            setUninstalling(true);
+            setError('');
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+            const response = await fetch('/connector/uninstall', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken || '',
+                },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to uninstall');
+            }
+
+            setUninstalledShop(connectedShop.name);
+            setUninstalling(false);
+            setShowConfirm(false);
+        } catch (err) {
+            setError(err.message || 'An error occurred during uninstall');
+            setUninstalling(false);
+            setShowConfirm(false);
+        }
+    };
+
     return (
         <AuthenticatedLayout header="Connect Shopify Store">
             <Head title="Connect Store" />
@@ -124,38 +203,126 @@ export default function Connector() {
             <div style={styles.container}>
                 <div style={styles.card}>
                     <div style={styles.icon}>🛍️</div>
-                    <div style={styles.badge}>Quick Setup</div>
-                    <h1 style={styles.title}>Connect Your Shopify Store</h1>
-                    <p style={styles.subtitle}>
-                        Enter your Shopify store domain to connect and start managing your products.
-                    </p>
 
-                    {error && <div style={styles.error}>⚠️ {error}</div>}
+                    {uninstalledShop ? (
+                        <>
+                            <div style={{ ...styles.badge, backgroundColor: '#fef3c7', color: '#92400e' }}>Step 2 of 2</div>
+                            <h1 style={styles.title}>Almost Done</h1>
+                            <p style={styles.subtitle}>
+                                The store has been disconnected from this app. To fully uninstall, please also remove it from your Shopify Admin.
+                            </p>
 
-                    <form style={styles.form} onSubmit={handleConnect}>
-                        <input
-                            type="text"
-                            style={styles.input}
-                            placeholder="example.myshopify.com"
-                            value={shopDomain}
-                            onChange={(e) => setShopDomain(e.target.value)}
-                            disabled={loading}
-                            autoFocus
-                        />
-                        <button
-                            type="submit"
-                            style={styles.button}
-                            disabled={loading}
-                            onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#1f2937')}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#000'}
-                        >
-                            {loading ? '⏳ Connecting...' : '🔗 Connect Store'}
-                        </button>
-                    </form>
+                            <div style={styles.shopName}>{uninstalledShop}</div>
 
-                    <div style={styles.footer}>
-                        <p>✨ You'll be redirected to Shopify to authorize the app securely</p>
-                    </div>
+                            <a
+                                href={`https://${uninstalledShop}/admin/apps`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ ...styles.button, display: 'block', textDecoration: 'none', marginBottom: '12px' }}
+                            >
+                                Remove from Shopify Admin →
+                            </a>
+
+                            <button
+                                style={{ ...styles.button, backgroundColor: '#6b7280' }}
+                                onClick={() => setUninstalledShop(null)}
+                            >
+                                Connect a Different Store
+                            </button>
+                        </>
+                    ) : connectedShop ? (
+                        <>
+                            <div style={styles.connectedBadge}>Connected</div>
+                            <h1 style={styles.title}>Store Connected</h1>
+                            <p style={styles.subtitle}>
+                                Your Shopify store is currently connected to this app.
+                            </p>
+
+                            {error && <div style={styles.error}>⚠️ {error}</div>}
+
+                            <div style={styles.shopName}>{connectedShop.name}</div>
+
+                            <hr style={styles.divider} />
+
+                            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '12px' }}>
+                                To connect a different store, uninstall first.
+                            </p>
+
+                            {showConfirm ? (
+                                <>
+                                    <p style={{ fontSize: '14px', color: '#dc2626', marginBottom: '12px', fontWeight: '500' }}>
+                                        This will disconnect the store from this app and open your Shopify Admin so you can also remove it from there.
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '12px' }}>
+                                        <button
+                                            style={{ ...styles.uninstallButton, flex: 1, marginTop: 0 }}
+                                            onClick={handleUninstall}
+                                            disabled={uninstalling}
+                                        >
+                                            {uninstalling ? 'Uninstalling...' : 'Yes, Uninstall'}
+                                        </button>
+                                        <button
+                                            style={{ ...styles.button, flex: 1, backgroundColor: '#6b7280' }}
+                                            onClick={() => setShowConfirm(false)}
+                                            disabled={uninstalling}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <button
+                                    style={styles.uninstallButton}
+                                    onClick={handleUninstall}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#dc2626';
+                                        e.currentTarget.style.color = '#fff';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#fff';
+                                        e.currentTarget.style.color = '#dc2626';
+                                    }}
+                                >
+                                    Uninstall App
+                                </button>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <div style={styles.badge}>Quick Setup</div>
+                            <h1 style={styles.title}>Connect Your Shopify Store</h1>
+                            <p style={styles.subtitle}>
+                                Enter your Shopify store domain to connect and start managing your products.
+                            </p>
+
+                            {error && <div style={styles.error}>⚠️ {error}</div>}
+
+                            <form style={styles.form} onSubmit={handleConnect}>
+                                <input
+                                    type="text"
+                                    style={styles.input}
+                                    placeholder="example.myshopify.com"
+                                    value={shopDomain}
+                                    onChange={(e) => setShopDomain(e.target.value)}
+                                    disabled={loading}
+                                    autoFocus
+                                />
+                                <button
+                                    type="submit"
+                                    style={styles.button}
+                                    disabled={loading}
+                                    onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#1f2937')}
+                                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#000')}
+                                >
+                                    {loading ? '⏳ Connecting...' : '🔗 Connect Store'}
+                                </button>
+                            </form>
+
+                            <div style={styles.footer}>
+                                <p>✨ You'll be redirected to Shopify to authorize the app securely</p>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </AuthenticatedLayout>
