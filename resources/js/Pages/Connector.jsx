@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 const styles = {
@@ -136,7 +136,6 @@ export default function Connector({ connectedShop }) {
     const [loading, setLoading] = useState(false);
     const [uninstalling, setUninstalling] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
-    const [uninstalledShop, setUninstalledShop] = useState(null);
 
     const handleConnect = (e) => {
         e.preventDefault();
@@ -186,13 +185,10 @@ export default function Connector({ connectedShop }) {
                 throw new Error(data.error || 'Failed to uninstall');
             }
 
-            setUninstalledShop(connectedShop.name);
-            setUninstalling(false);
-            setShowConfirm(false);
+            router.visit(route('connector'));
         } catch (err) {
             setError(err.message || 'An error occurred during uninstall');
             setUninstalling(false);
-            setShowConfirm(false);
         }
     };
 
@@ -204,33 +200,7 @@ export default function Connector({ connectedShop }) {
                 <div style={styles.card}>
                     <div style={styles.icon}>🛍️</div>
 
-                    {uninstalledShop ? (
-                        <>
-                            <div style={{ ...styles.badge, backgroundColor: '#fef3c7', color: '#92400e' }}>Step 2 of 2</div>
-                            <h1 style={styles.title}>Almost Done</h1>
-                            <p style={styles.subtitle}>
-                                The store has been disconnected from this app. To fully uninstall, please also remove it from your Shopify Admin.
-                            </p>
-
-                            <div style={styles.shopName}>{uninstalledShop}</div>
-
-                            <a
-                                href={`https://${uninstalledShop}/admin/apps`}
-                                target="_blank"
-                                rel="noreferrer"
-                                style={{ ...styles.button, display: 'block', textDecoration: 'none', marginBottom: '12px' }}
-                            >
-                                Remove from Shopify Admin →
-                            </a>
-
-                            <button
-                                style={{ ...styles.button, backgroundColor: '#6b7280' }}
-                                onClick={() => setUninstalledShop(null)}
-                            >
-                                Connect a Different Store
-                            </button>
-                        </>
-                    ) : connectedShop ? (
+                    {connectedShop ? (
                         <>
                             <div style={styles.connectedBadge}>Connected</div>
                             <h1 style={styles.title}>Store Connected</h1>
@@ -251,7 +221,7 @@ export default function Connector({ connectedShop }) {
                             {showConfirm ? (
                                 <>
                                     <p style={{ fontSize: '14px', color: '#dc2626', marginBottom: '12px', fontWeight: '500' }}>
-                                        This will disconnect the store from this app and open your Shopify Admin so you can also remove it from there.
+                                        This will uninstall the app from your Shopify store and disconnect it from this app.
                                     </p>
                                     <div style={{ display: 'flex', gap: '12px' }}>
                                         <button
